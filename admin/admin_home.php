@@ -61,6 +61,17 @@ $activity_types_data = [];
 while ($row = mysqli_fetch_assoc($activity_types_result)) {
     $activity_types_data[$row['activity_type']] = $row['count'];
 }
+
+// Fetch open emergency reports
+$emergency_notifications_sql = "
+    SELECT er.id, er.report_time, er.description, e.first_name, e.last_name, u.username 
+    FROM emergency_reports er 
+    JOIN elderly_members e ON er.elderly_id = e.member_id 
+    JOIN users u ON er.reported_by = u.id 
+    WHERE er.status = 'open'
+    ORDER BY er.report_time DESC
+";
+$emergency_notifications_result = mysqli_query($conn, $emergency_notifications_sql);
 ?>
 
 <!DOCTYPE html>
@@ -89,8 +100,45 @@ while ($row = mysqli_fetch_assoc($activity_types_result)) {
 <body>
 <?php include('admin_navbar.php'); ?>
 
+
+
 <div class="container mt-5 mb-5">
     <h2 class="text-center text-primary mb-4">Admin Dashboard</h2>
+
+<div class="mb-4">
+    <?php if (mysqli_num_rows($emergency_notifications_result) > 0): ?>
+        <?php while ($notification = mysqli_fetch_assoc($emergency_notifications_result)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Emergency Report (ID: <?php echo $notification['id']; ?>)</strong><br>
+                <p class="mb-0">
+                    Reported by: <?php echo htmlspecialchars($notification['username']); ?><br>
+                    For: <?php echo htmlspecialchars($notification['first_name'] . ' ' . $notification['last_name']); ?><br>
+                    Time: <?php echo htmlspecialchars($notification['report_time']); ?><br>
+                    Description: <?php echo nl2br(htmlspecialchars($notification['description'])); ?>
+                </p>
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <div class="alert alert-info" role="alert">
+            No open emergency reports at this time.
+        </div>
+    <?php endif; ?>
+</div>
+
+<script>
+// Fallback JavaScript for alert dismissal
+document.querySelectorAll('.alert-dismissible .close').forEach(button => {
+    button.addEventListener('click', function() {
+        const alert = this.closest('.alert');
+        alert.classList.remove('show');
+        alert.classList.add('fade');
+        setTimeout(() => alert.remove(), 150); // Remove after fade transition
+    });
+});
+</script>
 
     <!-- Dashboard cards -->
     <div class="card-deck mb-4">

@@ -47,6 +47,22 @@ $stmt_emergencies->bind_param("i", $user_id);
 $stmt_emergencies->execute();
 $emergencies = $stmt_emergencies->get_result();
 $stmt_emergencies->close();
+
+// Fetch open emergency reports for elderly members linked to the staff's user_id as family member
+$emergency_notifications_sql = "
+    SELECT er.id, er.report_time, er.description, e.first_name, e.last_name, u.username 
+    FROM emergency_reports er 
+    JOIN elderly_members e ON er.elderly_id = e.member_id 
+    JOIN users u ON er.reported_by = u.id 
+    WHERE er.status = 'open' AND e.family_member_id = ?
+    ORDER BY er.report_time DESC
+";
+$stmt_notifications = $conn->prepare($emergency_notifications_sql);
+$stmt_notifications->bind_param("i", $user_id);
+$stmt_notifications->execute();
+$emergency_notifications_result = $stmt_notifications->get_result();
+$stmt_notifications->close();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -146,7 +162,40 @@ $stmt_emergencies->close();
 
 <div class="container">
     <h2>Welcome back, <?= htmlspecialchars($user['username']) ?>!</h2>
+<div class="mb-4">
+    <?php if ($emergency_notifications_result->num_rows > 0): ?>
+        <?php while ($notification = $emergency_notifications_result->fetch_assoc()): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Emergency Report (ID: <?php echo $notification['id']; ?>)</strong><br>
+                <p class="mb-0">
+                    Reported by: <?php echo htmlspecialchars($notification['username']); ?><br>
+                    For: <?php echo htmlspecialchars($notification['first_name'] . ' ' . $notification['last_name']); ?><br>
+                    Time: <?php echo htmlspecialchars($notification['report_time']); ?><br>
+                    Description: <?php echo nl2br(htmlspecialchars($notification['description'])); ?>
+                </p>
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <div class="alert alert-info" role="alert">
+            No open emergency reports for elderly members linked to this family member at this time.
+        </div>
+    <?php endif; ?>
+</div>
 
+<script>
+// Fallback JavaScript for alert dismissal
+document.querySelectorAll('.alert-dismissible .close').forEach(button => {
+    button.addEventListener('click', function() {
+        const alert = this.closest('.alert');
+        alert.classList.remove('show');
+        alert.classList.add('fade');
+        setTimeout(() => alert.remove(), 150); // Remove after fade transition
+    });
+});
+</script>
     <div class="row">
         <!-- Profile Section (Left) -->
         <div class="col-lg-4 col-md-12">
@@ -192,7 +241,7 @@ $stmt_emergencies->close();
                                             <?= htmlspecialchars(ucfirst($m['status'])) ?>
                                         </td>
                                         <td>
-                                            <a href="member_full_report.php?id=<?= $m['member_id'] ?>" class="btn btn-sm btn-primary">View Report</a>
+                                            <a href="member_report.php?id=<?= $m['member_id'] ?>" class="btn btn-sm btn-primary">View Report</a>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>

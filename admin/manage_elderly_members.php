@@ -105,6 +105,8 @@ $users = mysqli_query($conn, "SELECT id, username FROM users WHERE user_type='fa
                 <td>
                     <button class="btn btn-sm btn-primary" onclick='editMember(<?= json_encode($row) ?>)'>Edit</button>
                     <a href="?delete=<?= $row['member_id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+                <a href="member_report.php?id=<?= $row['member_id'] ?>" class="btn btn-sm btn-info">View Report</a>
+
                 </td>
             </tr>
         <?php endwhile; ?>
